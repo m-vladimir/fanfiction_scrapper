@@ -17,19 +17,21 @@ class FanficsSpider(scrapy.Spider):
         for block in response.css("div.bs"):
             url = block.css("a.pull-right").attrib.get("href")
             info = block.css("div > div ::text")[0].extract().split(", ")
-            is_normal = info[4].startswith("words:")
+            is_normal = len(info) > 4 and info[4].startswith("words:")
             words = info[4] if is_normal else info[3]
 
             chars = block.css("div > div ::text").extract()[-1][2:]
-            if chars[-1] == "]":
+            if len(chars) > 1 and chars[-1] == "]":
                 chars = chars[:-1]
 
-            pairs = re.findall(r"\[([^\]]+)", chars) 
+            pairs = re.findall(r"\[([^\]]+)", chars)
+
+            description = max([(len(text), text) for text in block.css("div.bs ::text").extract()])[1]
 
             yield {
                 "name": block.css("a:nth-of-type(2)::text").extract(),
                 "url": "{}/s/{}".format(base_url, url[3:]) if url else "",
-                "description": block.css("div.bs ::text")[6].extract()[3:],
+                "description": description.strip(),
                 "words": words.replace("words: ", ""),
                 "genres": info[2] if is_normal else "",
                 "pairs": [pair.split(", ") for pair in pairs],
